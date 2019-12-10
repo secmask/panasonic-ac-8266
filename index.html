@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+    <script type='text/javascript'>
+        var timeZone = 7 * 3600;
+        var prefix = '';//'http://esp8266.local'
+        function turnOffAt() {
+            var d = new Date(document.getElementById('offat').value).getTime() / 1000 - (timeZone);
+            fetch(prefix + '/set-time-off?at=' + d, {
+                method: 'post'
+            }).then(function (response) {
+                return response.text();
+            }).then(function (data) {
+                alert(data);
+            })
+        }
+        function formatDate(m) {
+            var dateString =
+                m.getUTCFullYear() + "/" +
+                ("0" + (m.getUTCMonth() + 1)).slice(-2) + "/" +
+                ("0" + m.getUTCDate()).slice(-2) + " " +
+                ("0" + m.getUTCHours()).slice(-2) + ":" +
+                ("0" + m.getUTCMinutes()).slice(-2) + ":" +
+                ("0" + m.getUTCSeconds()).slice(-2);
+            return dateString;
+        }
+        function formatDateISO(m) {
+            var dateString =
+                m.getUTCFullYear() + "-" +
+                ("0" + (m.getUTCMonth() + 1)).slice(-2) + "-" +
+                ("0" + m.getUTCDate()).slice(-2) + "T" +
+                ("0" + m.getUTCHours()).slice(-2) + ":" +
+                ("0" + m.getUTCMinutes()).slice(-2) + ":" +
+                ("0" + m.getUTCSeconds()).slice(-2);
+            return dateString;
+        }
+        function powerOn() {
+            var data = new URLSearchParams(new FormData(document.getElementById("ac")));
+            data.append("action", "on");
+            fetch(prefix + "/control", {
+                body: data,
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                method: "post",
+            }).then(function (response) {
+                return response.text();
+            }).then(function (text) {
+                console.info(text);
+            });
+        }
+
+        function powerOff() {
+            var data = new URLSearchParams(new FormData(document.getElementById("ac")));
+            data.append("action", "off");
+            fetch(prefix + "/control", {
+                body: data,
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                method: "post",
+            }).then(function (response) {
+                return response.text();
+            }).then(function (text) {
+                console.info(text);
+            });
+        }
+        function cancelTurnOff() {
+            fetch(prefix + "/cancel-timer", {
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                method: "post",
+            }).then(function (response) {
+                return response.text();
+            }).then(function (text) {
+                console.info(text);
+            });
+        }
+        function loadStatus() {
+            fetch(prefix + '/set-time-off', { method: 'get' }).then(function (response) {
+                return response.text();
+            }).then(function (text) {
+                var status = text.split(';');
+                if (status[0] === '1') {
+                    document.getElementById('status_block').style.display = 'block';
+                    var s = formatDate(new Date((parseInt(status[1]) + timeZone) * 1000));
+                    document.getElementById('current_status').innerText = "Current Timer: " + s;
+                    document.getElementById('offat').value = formatDateISO(new Date((parseInt(status[1]) + timeZone) * 1000));
+                } else {
+                    document.getElementById('status_block').style.display = 'none';
+                }
+            })
+        }
+    </script>
+    <style type="text/css">
+        form {
+            margin: 24px 0 0 0;
+        }
+
+        form legend {
+            font-size: 1.125em;
+            font-weight: bold;
+        }
+
+        form fieldset {
+            margin: 0 0 32px 0;
+            padding: 8px;
+            border: 1px solid #ccc;
+        }
+
+        form label {
+            float: left;
+            width: 100px;
+        }
+
+        form label,
+        form input {
+            margin: 5px 0;
+        }
+
+        form input {
+            width: 100%;
+        }
+
+        form span {
+            display: block;
+            overflow: hidden;
+            padding: 0 5px 0 0;
+        }
+    </style>
+</head>
+
+<body onload='loadStatus()'>
+    <div class="container-fluid">
+        <div class="row" style="padding-bottom:1em">
+            <div class="col-12">
+                <form id="ac" onsubmit="return false;">
+                    <fieldset>
+                        <legend>AC</legend>
+                        <div class="input-group fluid">
+                            <label for="mode">Mode</label>
+                            <span>
+                                <select id="mode" name="mode"
+                                    class="browser-default custom-select custom-select-lg mb-3">
+                                    <option value="heat">Heat</option>
+                                    <option value="cool" selected>Cool</option>
+                                    <option value="dry">Dry</option>
+                                </select>
+                            </span>
+                        </div>
+                        <div class="input-group fluid">
+                            <label for="temp">Temp</label>
+                            <span><input type="number" value="27" id="temp" name="temp" placeholder="temperate"></span>
+                        </div>
+                        <div class="input-group fluid">
+                            <label for="fan">Fan Speed</label>
+                            <span style="margin-bottom: 1em;">
+                                <select id="fan" name="fan" class="browser-default custom-select custom-select-lg mb-3">
+                                    <option value="max">Max</option>
+                                    <option value="med" selected>Medium</option>
+                                    <option value="auto">Auto</option>
+                                </select>
+                            </span>
+                        </div>
+                        <div class="input-group fluid">
+                            <label for="vfan">VFan</label>
+                            <span style="margin-bottom: 1em;">
+                                <select id="vfan" name="vfan" class="browser-default custom-select custom-select-lg mb-3">
+                                    <option value="highest">Highest</option>
+                                    <option value="high">High</option>
+                                    <option value="mid" selected>Mid</option>
+                                    <option value="low">Low</option>
+                                    <option value="lowest">Lowest</option>
+                                    <option value="auto">Auto</option>
+                                </select>
+                            </span>
+                        </div>
+                        <div class="input-group fluid">
+                            <label for="hfan">HFan</label>
+                            <span style="margin-bottom: 1em;">
+                                <select id="hfan" name="hfan" class="browser-default custom-select custom-select-lg mb-3">
+                                    <option value="fleft">FullLeft</option>
+                                    <option value="left">Left</option>
+                                    <option value="mid" selected>Mid</option>
+                                    <option value="right">Right</option>
+                                    <option value="fright">FullRight</option>
+                                    <option value="auto">Auto</option>
+                                </select>
+                            </span>
+                        </div>
+                        <div class="input-group fluid">
+                            <button type="button" style="margin-right: 2em;" class="btn btn-default btn-lg"
+                                onclick='powerOn()'>Power On</button>
+                            <button type="button" class="btn btn-lg btn-default" onclick='powerOff()'>Power Off</button>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+        <div class="row">
+            <form id="timeoff" onsubmit="return false;">
+                <fieldset>
+                    <legend>Turn Off Timer</legend>
+                    <div style="display: none;padding-bottom:1em" id="status_block">
+                        <div id='current_status' class="card warning"></div>
+                    </div>
+                    <div>
+                        <div style="margin-bottom: 1em;">
+                            <label for="fan">At</label>
+                            <span><input type='datetime-local' name='offat' id='offat'></span>
+                        </div>
+                        <button type="button" style="margin-right: 2em;" class="btn btn-lg btn-default"
+                            onclick='turnOffAt()'>Set</button>
+                        <button type="button" class="btn btn-default btn-lg" onclick='cancelTurnOff()'>Cancel</button>
+                    </div>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>
